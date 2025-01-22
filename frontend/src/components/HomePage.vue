@@ -4,6 +4,10 @@
       <router-link to="/register">
         <button>Creare cont</button>
       </router-link>
+
+      <router-link to="/login">
+        <button>Intra in cont</button>
+      </router-link>
     </div>
   </template>
   
