@@ -20,7 +20,7 @@
   </template>
   
   <script>
-  import axios from 'axios';
+  import axios from '@/api/axios';
 
   export default {
     name: "LoginPage",
@@ -35,13 +35,18 @@
     methods: {
         async login() {
             try {
-                const response = await axios.post('http://localhost:5000/api/login', {
-                email: this.email,
-                password: this.password
+                const response = await axios.post('/login', {
+                    email: this.email,
+                    password: this.password
                 });
-
+                
                 const token = response.data.token;
                 localStorage.setItem('token', token);
+
+                this.$store.dispatch('login', {
+                  user: response.data.user,
+                  token: response.data.token,
+                });
 
                 this.successMessage = response.data.message;
                 this.errorMessage = '';
@@ -49,12 +54,16 @@
                 this.email = '';
                 this.password = '';
 
+                this.$router.push('/mainPage');
             } catch (error) {
+              if (error.response) {
+                  this.errorMessage = error.response.data.message || 'Eroare la autentificare!';
+                } else if (error.request) {
+                  this.errorMessage = 'Serverul nu răspunde. Vă rugăm încercați mai târziu.';
+                } else {
+                  this.errorMessage = 'A apărut o eroare.';
+                }
                 this.successMessage = '';
-                this.errorMessage =
-                error.response && error.response.data.message
-                    ? error.response.data.message
-                    : 'A apărut o eroare. Te rugăm să încerci din nou.';
             }
         }
     }

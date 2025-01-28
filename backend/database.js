@@ -9,11 +9,4 @@ admin.initializeApp({
 
 const db = getFirestore();
  
-db.collection('users').get()
-  .then(snapshot => {
-    console.log('Database connection test passed:', snapshot.docs.map(doc => doc.data()));
-  })
-  .catch(error => {
-    console.error('Database connection failed:', error.message);
-  });
 module.exports = db;

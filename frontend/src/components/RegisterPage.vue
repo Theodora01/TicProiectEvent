@@ -24,6 +24,7 @@
           <input type="password" id="confirmPassword" v-model="confirmPassword" required />
         </div>
         <button type="submit">Creează cont</button>
+        <div v-if="loading" class="loader">Înregistrare în curs...</div>
       </form>
       <p v-if="successMessage" class="success">{{ successMessage }}</p>
       <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
@@ -32,7 +33,7 @@
   </template>
   
   <script>
-  import axios from 'axios';
+  import axios from '@/api/axios';
   
   export default {
     name: 'RegisterPage',
@@ -44,7 +45,8 @@
         password: '',
         confirmPassword: '',
         successMessage: '',
-        errorMessage: ''
+        errorMessage: '',
+        loading: false
       };
     },
     methods: {
@@ -55,8 +57,11 @@
           return;
         }
   
+        this.loading = true; 
+        this.successMessage = '';
+        this.errorMessage = '';
         try {
-          const response = await axios.post('http://localhost:5000/api/register', {
+          const response = await axios.post('/register', {
             prenume: this.prenume,
             nume: this.nume,
             email: this.email,
@@ -71,12 +76,19 @@
           this.prenume = '';
           this.password = '';
           this.confirmPassword = '';
+
+          this.$router.push('/login');
         } catch (error) {
-          this.successMessage = '';
-          this.errorMessage =
-            error.response && error.response.data.message
-              ? error.response.data.message
-              : 'A apărut o eroare.';
+          if (error.response) {
+                  this.errorMessage = error.response.data.message || 'Eroare la autentificare!';
+                } else if (error.request) {
+                  this.errorMessage = 'Serverul nu răspunde. Vă rugăm încercați mai târziu.';
+                } else {
+                  this.errorMessage = 'A apărut o eroare.';
+                }
+                this.successMessage = '';
+        }finally {
+          this.loading = false; 
         }
       }
     }
@@ -137,5 +149,10 @@ button:hover {
 .error {
   color: red;
   margin-top: 10px;
+}
+.loader {
+  margin-top: 20px;
+  color: #42b983;
+  font-weight: bold;
 }
 </style>
