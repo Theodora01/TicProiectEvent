@@ -4,8 +4,8 @@ const jwt = require('jsonwebtoken');
 const morgan = require('morgan');
 const db = require('./database');
 const admin = require("firebase-admin");
-const firebaseApp = require('./firebase'); 
-const firebaseAuth = require('firebase/auth');
+//const firebaseAuth = require('firebase/auth');
+const eventsRoute = require("./events"); 
 const port = 5000;
 
 const app = express();
@@ -20,6 +20,7 @@ function validatePassword(password){
   const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
   return regex.test(password);
 }
+
 // Înregistrare utilizatori
 app.post('/api/register', async (req, res) => {
   try {
@@ -59,24 +60,26 @@ const SECRET_KEY = 'SECRET_KEY';
 
 app.post('/api/login', async (req,res) => {
 
-  const { email, password } = req.body;
+  const { email } = req.body;
   try{
-    const auth = firebaseAuth.getAuth(firebaseApp); 
-    const userCredential = await firebaseAuth.signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+    const userCredential = await admin.auth().getUserByEmail(email);
 
     const token = jwt.sign(
       {
-        uid : user.uid,
-        email: user.email
+        uid : userCredential.uid,
+        email: userCredential.email
       },
       SECRET_KEY,
       { expiresIn: '1h' } 
     );
+    console.log("Token JWT generat:", token);
 
-    const userDoc = await db.collection('users').doc(user.uid).get();
+    const userDoc = await db.collection('users').doc(userCredential.uid).get();
     const userData = userDoc.data();
 
+    if (!userDoc.exists) {
+      console.error("Documentul utilizatorului nu există.");
+    }
     if (!userData) {
       return res.status(404).json({ message: 'Utilizatorul nu are date asociate!' });
     }
@@ -84,7 +87,7 @@ app.post('/api/login', async (req,res) => {
       message: 'Autentificare reusita!',
       token,
       user: {
-        uid: user.uid,
+        uid: userCredential.uid,
         prenume: userData.prenume,
         nume: userData.nume,
         email: userData.email,
@@ -98,9 +101,13 @@ app.post('/api/login', async (req,res) => {
 
 });
 
+app.use("/events", eventsRoute); 
+app.get("/", (req, res) => {
+  res.send("Serverul Express funcționează!");
+});
+
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
 
-module.exports = app;
-module.exports = db;
+module.exports = {app, db };
