@@ -18,7 +18,8 @@ routeEvents.post("/add", async (req , res) => {
             title,
             description,
             date,
-            idUser
+            idUser,
+            participant: 0
         });
 
         res.status(201).json({ message: "Eveniment adaugat!", id: eventId})
@@ -77,6 +78,58 @@ routeEvents.get("/getByUser/:idUser", async (req, res) => {
     } catch (error) {
         console.error("Eroare la obținerea evenimentelor:", error);
         res.status(500).json({ error: "Eroare la obținerea evenimentelor." });
+    }
+});
+
+routeEvents.get("/getAllEvents/:idUser", async (req, res) =>{
+
+    const {idUser} = req.params;
+    try{
+        const snapshot = await db.collection("events").get();
+
+        if(snapshot.empty){
+            return res.status(404).json({ error: "Nu exista evenimente disponibile."});
+        }
+
+        const events = snapshot.docs
+            .map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }))
+            .filter(event => event.idUser !== idUser);
+
+        res.status(200).json(events);
+    }catch(error){
+        res.status(500).json({ message: "Eroare la obtinerea evenimentelor"});
+    }
+});
+
+routeEvents.post("/join/:idEvent", async (req, res) =>{
+    const {idEvent} =req.params;
+    const { idUser } = req.body;
+
+    try{
+        const eventRef = db.collection("events").doc(idEvent);
+        const eventDoc = await eventRef.get();
+
+        if(!eventDoc.exists){
+            return res.status(404).json({ message: "Evenimentul nu exista"});
+        }
+
+        const participants = eventDoc.data().participants || [];
+
+        if (participants.includes(idUser)) {
+            return res.status(400).json({ message: "Ești deja înscris la acest eveniment." });
+        }
+        participants.push(idUser);
+        await eventRef.update({
+            participants, 
+            participant: participants.length,
+        });
+        res.status(200).json({ message: "Te-ai înscris la eveniment!" });
+    }catch (error) {
+        console.error("Eroare la înscriere:", error);
+        res.status(500).json({ error: "Nu s-a putut actualiza evenimentul." });
     }
 });
 

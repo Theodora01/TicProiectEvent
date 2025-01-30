@@ -2,7 +2,7 @@
     <div class="login-page">
      <div class="form-container">
       <h1>Autentificare</h1>
-      <form @submit.prevent="login">
+      <form @submit.prevent="login" autocomplete="off">
         <div>
           <label for="email">Email:</label>
           <input type="email" id="email" v-model="email" required />
@@ -12,6 +12,7 @@
           <input type="password" id="password" v-model="password" required />
         </div>
         <button type="submit">Autentifica-te</button>
+        <div v-if="loading" class="loader">Autentificare în curs...</div>
       </form>
       <p v-if="successMessage" class="success">{{ successMessage }}</p>
       <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
@@ -29,12 +30,21 @@
         email: '',
         password: '',
         successMessage: '',
-        errorMessage: ''
+        errorMessage: '',
+        loading: false
       };
     },
+    mounted() {
+      this.clearForm();
+    },
     methods: {
+        clearForm() {
+          this.email = "";
+          this.password = "";
+        },
         async login() {
             try {
+                this.loading = true;
                 const response = await axios.post('/login', {
                     email: this.email,
                     password: this.password
@@ -64,6 +74,8 @@
                   this.errorMessage = 'A apărut o eroare.';
                 }
                 this.successMessage = '';
+            }finally {
+              this.loading = false; 
             }
         }
     }
@@ -76,54 +88,59 @@
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background-color: #f5f5f5;
+    background-color: #fefeff;
   }
 
   .form-container {
-  background: #d6eecf;
-  border-radius: 15px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 30px;
-  max-width: 400px;
-  width: 100%;
-  text-align: center;
- }
+    background: #e0effb;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+  }
 
- form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
- }
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
 
- input {
-  padding: 10px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-}
+  input {
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+  }
 
-button {
-  padding: 10px 10px;
-  font-size: 16px;
-  background-color: #42b983;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-}
+  button {
+    padding: 10px 10px;
+    font-size: 16px;
+    background-color: #a1b1e9;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
 
-button:hover {
-  background-color: #369974;
-}
+  button:hover {
+    background-color: #c4c5e0;
+  }
 
-.success {
-  color: green;
-  margin-top: 10px;
-}
+  .success {
+    color: green;
+    margin-top: 10px;
+  }
 
-.error {
-  color: red;
-  margin-top: 10px;
-}
+  .error {
+    color: red;
+    margin-top: 10px;
+  }
+  .loader {
+    margin-top: 20px;
+    color: #2a1a14;
+    font-weight: bold;
+  }
  </style>
   

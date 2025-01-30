@@ -96,63 +96,63 @@
   </script>
   
   <style scoped>
-.register-page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background-color: #f5f5f5;
-}
+  .register-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f8f7fa;
+  }
 
-.form-container {
-  background: #d6eecf;
-  border-radius: 15px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 30px;
-  max-width: 400px;
-  width: 100%;
-  text-align: center;
-}
+  .form-container {
+    background: #e0effb;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+  }
 
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
 
-input {
-  padding: 10px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-}
+  input {
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+  }
 
-button {
-  padding: 10px 10px;
-  font-size: 16px;
-  background-color: #42b983;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-}
+  button {
+    padding: 10px 10px;
+    font-size: 16px;
+    background-color: #a1b1e9;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
 
-button:hover {
-  background-color: #369974;
-}
+  button:hover {
+    background-color: #c4c5e0;
+  }
 
-.success {
-  color: green;
-  margin-top: 10px;
-}
+  .success {
+    color: green;
+    margin-top: 10px;
+  }
 
-.error {
-  color: red;
-  margin-top: 10px;
-}
-.loader {
-  margin-top: 20px;
-  color: #42b983;
-  font-weight: bold;
-}
+  .error {
+    color: red;
+    margin-top: 10px;
+  }
+  .loader {
+    margin-top: 20px;
+    color: #2a1a14;
+    font-weight: bold;
+  }
 </style>

@@ -3,7 +3,7 @@
       <header class="header">
         <h1>Bun venit la Evenimente!</h1>
         <div class="user-info" v-if="isAuthenticated">
-          <p>Conectat ca: {{ user.prenume }} {{ user.nume }}</p>
+          <p>{{ user.prenume }} {{ user.nume }}</p>
           <button @click="logout">Logout</button>
         </div>
       </header>
@@ -52,6 +52,20 @@
         </table>
       </div>
     </section>
+
+    <div class="all-events">
+
+    </div>
+      <h2> Vizualizare evenimente</h2>
+      <div v-for="event in allEvents" :key="event.id" class="event-card">
+        <h3>{{ event.title }}</h3>
+          <p><strong>Descriere:</strong> {{ event.description }}</p>
+          <p><strong>Data:</strong> {{ event.date }}</p>
+          <p><strong>Număr participanți:</strong> {{ event.participant || 0 }}</p>
+
+          <button v-if="!event.participants || !event.participants.includes(user.uid)" @click="joinEvent(event.id)"> Participă </button>
+          <p v-else class="joined-message">Ești înscris la acest eveniment</p>
+      </div>
     </div>
   </template>
   
@@ -65,9 +79,11 @@
           id: null,
           title: '',
           description: '',
-          date: ''
+          date: '',
+          participant: 0
         },
-        events: []
+        events: [],
+        allEvents: []
       };
     },
     computed: {
@@ -80,6 +96,7 @@
     },
     mounted() {
       this.fetchEvents();
+      this.fetchAllEvents();
     },
     methods: {
         async handleSubmit() {
@@ -181,23 +198,40 @@
                     return;
                 }
 
-                const events = await response.json();
-                this.events = events.map(event => ({
-                    id: event.id,
-                    title: event.title,
-                    description: event.description,
-                    date: event.date,
-                    participant: event.participant || 0, // Inițializează participant cu 0 dacă nu există
-                }));
-                console.log("Evenimente preluate pentru utilizator:", this.events);
+                const eventsById = await response.json();
+                this.events = eventsById;
+            
             } catch (error) {
                 console.error("Eroare la preluarea evenimentelor:", error);
                 alert("Eroare la conectarea cu serverul.");
             }
         },
+        async fetchAllEvents(){
+            try{
+              const response = await fetch(`http://localhost:5000/events/getAllEvents/${this.user.uid}` ,{
+                method: "GET",
+                headers: {
+                        "Content-Type": "application/json",
+                    },
+              });
+              
+              if(!response.ok){
+                const error = await response.json();
+                alert(error.error || "Eroare la preluarea evenimentelor")
+                return;
+              }
+
+              const events = await response.json();
+              this.allEvents = events;
+
+            }catch(error){
+              console.error("Eroare la obținerea evenimentelor:", error);
+              alert("Nu s-au putut încărca evenimentele.");
+            }
+        },
         logout() {
             this.$store.dispatch('logout');
-            this.$router.push('/login');
+            this.$router.push('/');
         },
         async deleteEvent(eventId) {
           try {
@@ -218,6 +252,31 @@
             alert("Eroare la conectarea cu serverul.");
           }
       },
+      async joinEvent(idEvent){
+        try {
+          const response = await fetch(`http://localhost:5000/events/join/${idEvent}`, {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                  idUser: this.user.uid,
+              })
+           });
+
+          if (!response.ok) {
+            const error = await response.json();
+            alert(error.error || "Eroare la înscriere.");
+            return;
+          }
+
+          alert("Te-ai înscris cu succes la eveniment!");
+          await this.fetchAllEvents();
+        }catch (error) {
+            console.error("Eroare la înscriere:", error);
+            alert("Eroare la conectarea cu serverul.");
+        }
+      }
     },
 };
   </script>
@@ -226,16 +285,17 @@
 
   .main-page {
     padding: 20px;
+    background-color: #ffffff;
   }
   
   .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #f08460;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 10px;
+    background-color: #ffffff;
+    color: #004080;
+    padding: 10px 10px;
+    border-radius: 15px;
   }
   
   .user-info p {
@@ -251,27 +311,28 @@
     font-size: 16px;
     border: none;
     border-radius: 10px;
-    background-color: #f08460;
+    background-color: #709ce7;
     color: white;
     cursor: pointer;
   }
   
   button:hover {
-    background-color: #f08460;
+    background-color: #818fb3;
   }
   
   .dashboard {
-  display: flex;
-  margin-top: 20px;
-  }
+    display: flex;
+    margin-top: 20px;
+    background-color: #ffffff;
+    }
 
   .event-panel {
-    width: 30%;
-    background: #f9f9f9;
+    width: 35%;
+    background: #b6dbf9;
     border-radius: 10px;
     padding: 20px;
-    margin-right: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-right: 25px;
+    box-shadow: 0 4px 6px rgba(96, 95, 95, 0.1);
   }
 
   .event-panel h2 {
@@ -282,34 +343,61 @@
   .event-panel form textarea {
     display: block;
     width: 100%;
-    margin-bottom: 10px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-  }
+    margin-bottom: 15px; 
+    padding: 10px; 
+    border: 1px solid #ccc; 
+    border-radius: 5px; 
+    box-sizing: border-box; 
+    }
   .event-table {
-  flex-grow: 1;
-}
+    flex-grow: 1;
+  }
 
-.event-table table {
-  width: 100%;
-  border-collapse: collapse;
-}
+  .event-table table {
+    width: 100%;
+    border-collapse: collapse;
+  }
 
-.event-table th,
-.event-table td {
-  padding: 10px;
-  border: 1px solid #ddd;
-  text-align: left;
-}
+  .event-table th,
+  .event-table td {
+    padding: 10px;
+    border: 1px solid #7c8aa6;
+    text-align: left;
+  }
 
-.event-table th {
-  background-color: #f08460;
-  color: white;
-}
+  .event-table th {
+    background-color: #b6dbf9;
+    color: #151718;
+  }
 
-.event-table button {
-  margin-right: 5px;
-}
+  .event-table button {
+    margin-right: 5px;
+    background-color: #b6dbf9;
+  }
+
+  .all-events {
+    margin-top: 40px;
+  }
+
+  .event-card {
+    border: 1px solid #cfdaf5;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .event-card h3 {
+    margin-bottom: 10px;
+    color: #5582f7;
+  }
+
+  .event-card p {
+    margin: 5px 0;
+  }
+  .event-card button {
+    margin-right: 20px;
+  }
   </style>
   
