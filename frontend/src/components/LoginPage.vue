@@ -22,6 +22,8 @@
   
   <script>
   import axios from '@/api/axios';
+  import { signInWithEmailAndPassword } from 'firebase/auth';
+  import auth from '@/api/firebase';
 
   export default {
     name: "LoginPage",
@@ -43,19 +45,23 @@
           this.password = "";
         },
         async login() {
+            if (!this.email || !this.password) {
+                this.errorMessage = "Toate câmpurile sunt obligatorii!";
+                return;
+            }
+            this.errorMessage = "";
+            this.loading = true;
             try {
-                this.loading = true;
-                const response = await axios.post('/login', {
-                    email: this.email,
-                    password: this.password
-                });
-                
-                const token = response.data.token;
-                localStorage.setItem('token', token);
+                const userCredential = await signInWithEmailAndPassword(auth, this.email, this.password);
+                const token = await userCredential.user.getIdToken();
 
-                this.$store.dispatch('login', {
+                const response = await axios.post("/login", { token });
+                
+                console.log(auth);
+                localStorage.setItem("token", token);
+                this.$store.dispatch("login", {
                   user: response.data.user,
-                  token: response.data.token,
+                  token,
                 });
 
                 this.successMessage = response.data.message;
@@ -66,17 +72,11 @@
 
                 this.$router.push('/mainPage');
             } catch (error) {
-              if (error.response) {
-                  this.errorMessage = error.response.data.message || 'Eroare la autentificare!';
-                } else if (error.request) {
-                  this.errorMessage = 'Serverul nu răspunde. Vă rugăm încercați mai târziu.';
-                } else {
-                  this.errorMessage = 'A apărut o eroare.';
-                }
-                this.successMessage = '';
-            }finally {
-              this.loading = false; 
-            }
+                console.error("Eroare la autentificare:", error.message);
+                this.errorMessage = "Email sau parolă incorectă!";
+              }finally {
+                this.loading = false; 
+              }
         }
     }
   };

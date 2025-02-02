@@ -4,7 +4,7 @@
         <h1>Bun venit la Evenimente!</h1>
         <div class="user-info" v-if="isAuthenticated">
           <p>{{ user.prenume }} {{ user.nume }}</p>
-          <button @click="logout">Logout</button>
+          <button @click="logout">Deconectare</button>
         </div>
       </header>
   
@@ -54,19 +54,35 @@
     </section>
 
     <div class="all-events">
+      <div>
+        <button @click="showJoined = false">Toate Evenimentele</button>
+        <button @click="showJoined = true">Evenimentele la care particip</button>
+      </div>
 
-    </div>
-      <h2> Vizualizare evenimente</h2>
-      <div v-for="event in allEvents" :key="event.id" class="event-card">
-        <h3>{{ event.title }}</h3>
+      <div v-if="showJoined">
+        <div v-for="event in joinedEvents" :key="event.id" class="event-card">
+          <h3>{{ event.title }}</h3>
           <p><strong>Descriere:</strong> {{ event.description }}</p>
           <p><strong>Data:</strong> {{ event.date }}</p>
           <p><strong>Număr participanți:</strong> {{ event.participant || 0 }}</p>
-
-          <button v-if="!event.participants || !event.participants.includes(user.uid)" @click="joinEvent(event.id)"> Participă </button>
-          <p v-else class="joined-message">Ești înscris la acest eveniment</p>
+          <button @click="unsubscribeEvent(event.id)"> Dezabonare </button>
+          <p class="joined-message">Ești înscris la acest eveniment</p>
+        </div>
       </div>
-    </div>
+
+      <div v-else>
+        <div v-for="event in filteredAllEvents" :key="event.id" class="event-card">
+          <h3>{{ event.title }}</h3>
+            <p><strong>Descriere:</strong> {{ event.description }}</p>
+            <p><strong>Data:</strong> {{ event.date }}</p>
+            <p><strong>Număr participanți:</strong> {{ event.participant || 0 }}</p>
+
+            <button @click="joinEvent(event.id)"> Participă </button>
+        </div>
+      </div>
+  </div>
+  </div>
+
   </template>
   
   <script>
@@ -75,12 +91,13 @@
     name: "MainPage",
     data() {
       return {
+        showJoined: false,
         eventForm: {
           id: null,
           title: '',
           description: '',
           date: '',
-          participant: 0
+          participant: 0,
         },
         events: [],
         allEvents: []
@@ -93,8 +110,19 @@
       isAuthenticated() {
         return this.$store.getters.isAuthenticated;
       },
+      joinedEvents() {
+        return this.allEvents.filter(
+          (event) => event.participants && event.participants.includes(this.user.uid)
+        );
+      },
+      filteredAllEvents() {
+        return this.allEvents.filter(
+          (event) => !event.participants || !event.participants.includes(this.user.uid)
+        );
+      },
     },
     mounted() {
+      this.removeExpiredEvents();
       this.fetchEvents();
       this.fetchAllEvents();
     },
@@ -108,10 +136,13 @@
         },
         async addEvent() {
           try{
+            const token = localStorage.getItem('token');
+            console.log("Token pentru addEvent:", token);
             const response = await fetch("http://localhost:5000/events/add", {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
                   },
                   body: JSON.stringify({
                     title: this.eventForm.title,
@@ -146,10 +177,12 @@
         },
         async updateEvent() {
         try {
+          const token = localStorage.getItem('token');
             const response = await fetch(`http://localhost:5000/events/update/${this.eventForm.id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     title: this.eventForm.title,
@@ -235,8 +268,13 @@
         },
         async deleteEvent(eventId) {
           try {
+            const token = localStorage.getItem('token');
             const response = await fetch(`http://localhost:5000/events/delete/${eventId}`, {
               method: "DELETE",
+              headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`
+              },
             });
 
             if (!response.ok) {
@@ -254,10 +292,12 @@
       },
       async joinEvent(idEvent){
         try {
+          const token = localStorage.getItem('token');
           const response = await fetch(`http://localhost:5000/events/join/${idEvent}`, {
               method: "POST",
               headers: {
-                  "Content-Type": "application/json"
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`
               },
               body: JSON.stringify({
                   idUser: this.user.uid,
@@ -275,6 +315,52 @@
         }catch (error) {
             console.error("Eroare la înscriere:", error);
             alert("Eroare la conectarea cu serverul.");
+        }
+      },
+      async removeExpiredEvents() {
+        try {
+          const response = await fetch("http://localhost:5000/events/removeExpiredEvents", {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            console.error(error.error || "Eroare la ștergerea evenimentelor expirate.");
+            return;
+          }
+
+          console.log("Evenimentele expirate au fost șterse.");
+        } catch (error) {
+          console.error("Eroare la conectarea cu serverul pentru ștergerea evenimentelor expirate:", error);
+        }
+      },
+      async unsubscribeEvent(idEvent){
+        try{
+          const token = localStorage.getItem('token');
+          const response = await fetch(`http://localhost:5000/events/unsubscribeEvent/${idEvent}`, {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                  idUser: this.user.uid,
+              })
+           });
+
+           if(!response){
+            const error = await response.json();
+            alert(error.message || "Eroare la dezabonare.");
+            return;
+           }
+           await this.fetchAllEvents();
+           alert("Te-ai dezabonat de la eveniment!");
+        }catch(error){
+          console.error("Eroare la dezabonare:", error);
+          alert("Eroare la conectarea cu serverul.");
         }
       }
     },
@@ -307,10 +393,12 @@
   }
   
   button {
-    padding: 10px 15px;
+    padding: 10px 25px;
     font-size: 16px;
     border: none;
     border-radius: 10px;
+    margin-bottom: 20px;
+    margin-right: 20px;
     background-color: #709ce7;
     color: white;
     cursor: pointer;

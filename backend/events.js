@@ -1,10 +1,11 @@
 const express = require("express");
 const db = require("./database");
 const { v4: uuidv4 } = require("uuid");
+const authenticateUser = require("./middleware/authMiddleware");
 
 const routeEvents = express.Router();
 
-routeEvents.post("/add", async (req , res) => {
+routeEvents.post("/add",authenticateUser, async (req , res) => {
     try{
         const {title, description, date, idUser} = req.body;
 
@@ -29,7 +30,7 @@ routeEvents.post("/add", async (req , res) => {
     }
 });
 
-routeEvents.delete("/delete/:id", async (req, res) => {
+routeEvents.delete("/delete/:id",authenticateUser, async (req, res) => {
     try {
       const eventId = req.params.id;
       await db.collection("events").doc(eventId).delete();
@@ -40,7 +41,7 @@ routeEvents.delete("/delete/:id", async (req, res) => {
     }
 });
 
-routeEvents.put("/update/:id", async (req, res) => {
+routeEvents.put("/update/:id",authenticateUser, async (req, res) => {
     try {
       const eventId = req.params.id;
       const { title, description, date } = req.body;
@@ -104,7 +105,7 @@ routeEvents.get("/getAllEvents/:idUser", async (req, res) =>{
     }
 });
 
-routeEvents.post("/join/:idEvent", async (req, res) =>{
+routeEvents.post("/join/:idEvent",authenticateUser, async (req, res) =>{
     const {idEvent} =req.params;
     const { idUser } = req.body;
 
@@ -130,6 +131,51 @@ routeEvents.post("/join/:idEvent", async (req, res) =>{
     }catch (error) {
         console.error("Eroare la înscriere:", error);
         res.status(500).json({ error: "Nu s-a putut actualiza evenimentul." });
+    }
+});
+
+routeEvents.delete("/removeExpiredEvents", async() =>{
+    try{
+        const currentDate = new Date().toISOString().split('T')[0];
+
+        const snapshot = await db.collection("events")
+            .where('date', '<', currentDate)
+            .get()
+
+        for(const element of snapshot.docs) {
+            const eventRef = db.collection('events').doc(element.id);
+            await eventRef.delete();
+        }
+
+    }catch (error) {
+        console.error("Eroare la ștergerea evenimentelor expirate:", error);
+    }
+});
+
+routeEvents.post("/unsubscribeEvent/:idEvent",authenticateUser, async (req, res) =>{
+    const {idEvent} =req.params;
+    const { idUser } = req.body;
+
+    try{
+        const eventRef = db.collection("events").doc(idEvent);
+        const eventDoc = await eventRef.get();
+
+        if(!eventDoc.exists){
+            return res.status(404).json({ message: "Evenimentul nu exista"});
+        }
+
+        const participants = eventDoc.data().participants || [];
+
+        const updateParticipants = participants.filter((participant) => participant!== idUser)
+
+        await eventRef.update({
+            participants: updateParticipants,
+            participant: updateParticipants.length
+        })
+        res.status(200).json({ message: "Te-ai dezabonat de la eveniment!" });
+    }catch (error) {
+        console.error("Eroare la dezabonare:", error);
+        res.status(500).json({ error: "Nu s-a putut dezabonare eveniment." });
     }
 });
 

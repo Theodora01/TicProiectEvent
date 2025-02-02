@@ -4,8 +4,7 @@ const jwt = require('jsonwebtoken');
 const morgan = require('morgan');
 const db = require('./database');
 const admin = require("firebase-admin");
-//const firebaseAuth = require('firebase/auth');
-const eventsRoute = require("./events"); 
+const eventsRoute = require("./events");
 const port = 5000;
 
 const app = express();
@@ -60,48 +59,44 @@ const SECRET_KEY = 'SECRET_KEY';
 
 app.post('/api/login', async (req,res) => {
 
-  const { email } = req.body;
+  const {token} = req.body;
   try{
-    const userCredential = await admin.auth().getUserByEmail(email);
+    const decodedToken = await admin.auth().verifyIdToken(token);
 
-    const token = jwt.sign(
-      {
-        uid : userCredential.uid,
-        email: userCredential.email
-      },
-      SECRET_KEY,
-      { expiresIn: '1h' } 
-    );
-    console.log("Token JWT generat:", token);
-
-    const userDoc = await db.collection('users').doc(userCredential.uid).get();
-    const userData = userDoc.data();
+    const userDoc = await db.collection('users').doc(decodedToken.uid).get();
 
     if (!userDoc.exists) {
-      console.error("Documentul utilizatorului nu există.");
+      return res.status(404).json({ message: 'Utilizatorul nu există!' });
     }
-    if (!userData) {
-      return res.status(404).json({ message: 'Utilizatorul nu are date asociate!' });
-    }
+    const newToken = jwt.sign(
+      {
+        uid: decodedToken.uid,
+        email: decodedToken.email
+      },
+      SECRET_KEY,
+      { expiresIn: '1h' }
+    );
+    
+    const userData = userDoc.data();
+
     res.status(200).json({
-      message: 'Autentificare reusita!',
-      token,
+      message: 'Autentificare reușită!',
+      token: newToken,
       user: {
-        uid: userCredential.uid,
-        prenume: userData.prenume,
+        uid: decodedToken.uid,
+        email: decodedToken.email,
         nume: userData.nume,
-        email: userData.email,
+        prenume: userData.prenume,
       },
     });
-  
   }catch(error) {
     console.error('Eroare in timpul autentificarii!', error);
     res.status(401).json({ message: 'Email sau parola incorecta!'});
   }
-
 });
 
 app.use("/events", eventsRoute); 
+
 app.get("/", (req, res) => {
   res.send("Serverul Express funcționează!");
 });
